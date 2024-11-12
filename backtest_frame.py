@@ -24,7 +24,7 @@ rcParams['axes.unicode_minus'] = False  # 解决负号显示为乱码的问题
 # %%
 # 输出当前字体设置
 rcParams['font.sans-serif'] = 'Heiti TC'
-
+print("Current font family:", rcParams['font.sans-serif'])
 
 # %%
 def process_stock_universe(index_name,data_a):
@@ -59,14 +59,14 @@ def process_stock_universe(index_name,data_a):
 
     return df_close, df_open
 
-'''# %%
+# %%
 data_a = pd.read_csv('../data/a_close.csv',index_col = [0])
 
 # %%
 df_close = process_stock_universe('A',data_a)[0]
 
 # %%
-df_lstm = pd.read_csv('df_lstm.csv',parse_dates = ['date'],index_col = ['date','stock_code'])'''
+df_lstm = pd.read_csv('df_lstm.csv',parse_dates = ['date'],index_col = ['date','stock_code'])
 
 # %%
 #回测框架
@@ -129,7 +129,7 @@ class Simultrading:
 
         # 设置 start_date 和 end_date 的有效范围
         self.start_date = self.start_date if self.start_date >= self.dates[0] else self.dates[0]
-        self.end_date = self.end_date if self.end_date < self.dates[-1] else self.dates[-1]
+        self.end_date = self.end_date if self.end_date <= self.dates[-1] else self.dates[-1]
         self.total_dates = self.close_df.index.unique()
         self.total_dates = self.total_dates[(self.total_dates >= self.start_date) & (self.total_dates <= self.end_date)]
         self.dates = self.dates[(self.dates >= self.start_date) & (self.dates <= self.end_date)]
@@ -214,7 +214,7 @@ class Simultrading:
         
         # 更新日志
 
-        self.log_df_trading.loc[current_date, 'commission'] = sell_commission.sum() + buy_commission.sum()
+        self.log_df_trading.loc[current_date, 'commission'] = np.sum(sell_commission) + np.sum(buy_commission)
 
 
 
@@ -277,7 +277,7 @@ class Simultrading:
         if self.dates.get_loc(current_date) > 0:
             self.log_df.loc[current_date,'turnover'] = turnover'''
         if self.dates.get_loc(current_date) > 0:
-            self.log_df_trading.loc[current_date, 'turnover'] = sell_delta.sum() + buy_delta.sum()
+            self.log_df_trading.loc[current_date, 'turnover'] = np.sum(sell_delta) + np.sum(buy_delta)
             #计算ic 昨天到今天的股票的收益率向量 与 昨天的因子值的 corr
             factor_vector_last = self.rebalance_df.loc[self.dates[self.dates.get_loc(current_date)-1]]['factor']
             ic = self.return_each_stock.loc[current_date,list(target_values.index)].corr(factor_vector_last)
@@ -491,15 +491,18 @@ class Simultrading:
 
             
 
-'''# %%
+# %%
+
+
+# %%
 # 初始化数据
 rebalance_df = df_lstm
 close_df = df_close
 
 # 初始化回测
 backtest = Simultrading(
-    start_date='2017-10-10',
-    end_date=None,
+    start_date='2000-10-10',
+    end_date='2017-11-30',
     stamp_duty=0.0003,
     brokerage_commission=0.0005,
     start_value=1e+6,
@@ -517,7 +520,7 @@ backtest.run()
 backtest.positions.sum(axis=1)
 
 # %%
-backtest.show()'''
+backtest.show()
 
 # %%
 #现在是单因子回测 分层就是n个实例化的类 然后要分周期算ic（感觉不用跑回测这个） 多头空头 多空组合
@@ -871,22 +874,58 @@ class single_factor_test:
 
    
 
-   
+# %% [markdown]
+# # 回测框架
+# 
+# 本项目旨在构建一个基于机器学习模型的回测框架，用于金融数据分析和策略测试。
+# 
+# ## 文件结构
+# 
+# - `backtest_frame.ipynb`：回测框架的主代码，实现了策略的定义、数据处理和回测逻辑。
+# - `backtest_process.ipynb`：回测过程的详细步骤，包括数据加载、模型训练和结果分析。
+# - `df_lstm.csv`：经过处理的用于LSTM模型的输入数据集。
+# - `lstm_xgb_hs300_2015_2017.csv`：使用LSTM和XGBoost模型对2015-2017年沪深300指数数据的预测结果。
+# 
+# ## 依赖环境
+# 
+# - Python 3.x
+# - Jupyter Notebook
+# - 必要的Python库：`pandas`、`numpy`、`scikit-learn`、`tensorflow`、`xgboost`等
+# 
+# ## 使用方法
+# 
+# 1. 克隆或下载本仓库到本地机器。
+# 2. 确保已安装所需的Python环境和库。
+# 3. 使用Jupyter Notebook打开`backtest_frame.ipynb`或`backtest_process.ipynb`。
+# 4. 按顺序执行代码单元，进行数据加载、模型训练和回测分析。
+# 
+# ## 项目说明
+# 
+# 本项目通过结合LSTM和XGBoost模型，对金融市场的数据进行预测，并使用自定义的回测框架评估策略的有效性。适用于量化交易策略的研究和验证。
+# 
+# ## 注意事项
+# 
+# - 数据文件较大，请确保有足够的存储空间。
+# - 使用过程中请根据自身需求调整参数和模型配置。
+# 
+# ## 贡献指南
+# 
+# 欢迎对本项目提出改进建议或贡献代码。如有任何问题，请提交Issue与我们联系。
 
-'''# %%
+# %%
 single_factor = single_factor_test(
     num_layer = 5, 
     end_date = None,
-    start_date = '2017-10-10',
+    start_date = None,
     periods= (1,5,10,20), # 周期分别对应日频周频月频
     factor_df = pd.DataFrame(df_lstm.iloc[:,0]) , #因子数据dataframe 要求双索引 level0是date level1是stock_code 有唯一的因子值列
     close_df = df_close  ,# 股票收盘价数据 要求列名形式为'000000.XSHG'（与rebalance_df保持一致） index为‘date’ 建议后向填充一下 不填充的话更真实
     percent_ls = 0.1,
-    factor_name= 'LS啊M')
-single_factor.show_performance()'''
+    factor_name= 'LSTM')
+single_factor.show_performance()
 
 # %%
-def add_weight(df, percent: float=0.1):
+def add_weight(df, percent: float):
     """
     创建一个新 DataFrame，包含 'weight' 列，根据因子值按日期分层，
     选取每个日期的前 percent 的股票等权重，其他股票权重为 0。
